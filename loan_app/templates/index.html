@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoanSense — Credit Assessment</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d0f;--surface:#141417;--surface2:#1c1c21;--surface3:#242429;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);
+  --text:#f0eff0;--muted:#6e6d7a;--muted2:#9998a8;
+  --accent:#c8a96e;--accent2:#e8c98e;
+  --green:#3ecf8e;--green-bg:rgba(62,207,142,0.07);--green-bdr:rgba(62,207,142,0.2);
+  --red:#f87171;--red-bg:rgba(248,113,113,0.07);--red-bdr:rgba(248,113,113,0.2);
+  --amber:#f59e0b;--amber-bg:rgba(245,158,11,0.07);--amber-bdr:rgba(245,158,11,0.25);
+  --serif:'Playfair Display',serif;--mono:'DM Mono',monospace;--sans:'Plus Jakarta Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:0;
+}
+.app{max-width:820px;margin:0 auto;padding:3rem 1.5rem 6rem;position:relative;z-index:1}
+
+/* Header */
+.header{margin-bottom:3rem;animation:fadeDown 0.7s ease both}
+.header-tag{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);border:1px solid rgba(200,169,110,0.3);padding:5px 14px;border-radius:20px;margin-bottom:1.5rem}
+.header-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.header h1{font-family:var(--serif);font-size:50px;font-weight:400;line-height:1.1;letter-spacing:-1px;margin-bottom:1rem}
+.header h1 em{font-style:italic;color:var(--accent)}
+.header p{color:var(--muted2);font-size:15px;font-weight:300;max-width:500px;line-height:1.7}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+
+/* Feature importance pre-load */
+.fi-preview{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+.fi-preview-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.fi-preview img{width:100%;border-radius:8px;opacity:0.9}
+.fi-loading{color:var(--muted);font-size:13px;font-family:var(--mono)}
+
+/* Section labels */
+.sec-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:2rem 0 0.8rem;display:flex;align-items:center;gap:10px}
+.sec-label::before{content:'';width:20px;height:1px;background:var(--accent);opacity:0.5}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border2)}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:10px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field label{font-size:11px;font-weight:500;color:var(--muted2);letter-spacing:0.3px}
+.field select,.field input[type=number]{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:10px 13px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;-webkit-appearance:none;width:100%}
+.field select:focus,.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(200,169,110,0.1)}
+.field select option{background:#1c1c21}
+.range-wrap{position:relative;padding-top:22px}
+.range-val{position:absolute;top:0;right:0;font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:500}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--border2);border-radius:2px;outline:none;border:none;padding:0;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;background:var(--accent);border-radius:50%;box-shadow:0 0 0 4px rgba(200,169,110,0.15);transition:box-shadow 0.2s}
+input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 7px rgba(200,169,110,0.2)}
+
+/* Submit */
+.submit-btn{width:100%;padding:15px;background:var(--accent);border:none;border-radius:12px;color:#0d0d0f;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;margin-top:1.5rem;transition:background 0.2s,transform 0.1s,box-shadow 0.2s;display:flex;align-items:center;justify-content:center;gap:10px}
+.submit-btn:hover{background:var(--accent2);box-shadow:0 0 30px rgba(200,169,110,0.2)}
+.submit-btn:active{transform:scale(0.99)}
+.submit-btn.loading{opacity:0.6;pointer-events:none}
+.spinner{width:16px;height:16px;border:2px solid rgba(0,0,0,0.2);border-top-color:#000;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Results */
+.results{display:none;margin-top:2rem}
+.results.show{display:block;animation:fadeUp 0.5s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* Verdict */
+.verdict{border-radius:16px;padding:2rem;display:flex;align-items:center;gap:1.5rem;margin-bottom:10px}
+.verdict.approved{background:var(--green-bg);border:1px solid var(--green-bdr)}
+.verdict.rejected{background:var(--red-bg);border:1px solid var(--red-bdr)}
+.verdict-icon{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.approved .verdict-icon{background:rgba(62,207,142,0.15);color:var(--green)}
+.rejected .verdict-icon{background:rgba(248,113,113,0.15);color:var(--red)}
+.verdict-title{font-family:var(--serif);font-size:30px;font-weight:400;line-height:1.1}
+.approved .verdict-title{color:var(--green)}
+.rejected .verdict-title{color:var(--red)}
+.verdict-sub{font-size:13px;color:var(--muted2);margin-top:5px;font-family:var(--mono)}
+
+/* Borderline alert */
+.borderline-alert{background:var(--amber-bg);border:1px solid var(--amber-bdr);border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start}
+.borderline-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.borderline-text{font-size:13px;color:var(--amber);line-height:1.6}
+.borderline-text strong{font-weight:600;display:block;margin-bottom:2px}
+
+/* Prob bar */
+.prob-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:10px}
+.prob-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+.prob-bar{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.prob-fill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(0.4,0,0.2,1),background 0.5s}
+
+/* Reapplication score */
+.reapp-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:10px}
+.reapp-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.reapp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.reapp-stat{background:var(--surface2);border-radius:10px;padding:10px 12px;text-align:center}
+.reapp-stat-label{font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px}
+.reapp-stat-val{font-size:20px;font-weight:500;font-family:var(--mono)}
+.reapp-arrow{display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted)}
+
+/* SHAP chart */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:10px}
+.chart-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.chart-badge{background:rgba(200,169,110,0.1);color:var(--accent);font-size:10px;padding:2px 8px;border-radius:8px;font-family:var(--mono)}
+.chart-card img{width:100%;border-radius:8px}
+
+/* What-If simulator */
+.whatif-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:10px}
+.whatif-title{font-family:var(--serif);font-size:18px;font-weight:400;margin-bottom:6px}
+.whatif-desc{font-size:12px;color:var(--muted2);margin-bottom:1.25rem;line-height:1.6}
+.whatif-row{display:flex;flex-direction:column;gap:5px;margin-bottom:16px}
+.whatif-row label{font-size:11px;color:var(--muted2);font-weight:500}
+.whatif-slider-row{display:flex;align-items:center;gap:12px}
+.whatif-slider-row input[type=range]{flex:1}
+.whatif-val{font-family:var(--mono);font-size:13px;color:var(--accent);min-width:80px;text-align:right}
+.whatif-result{background:var(--surface2);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.whatif-result-label{font-size:12px;color:var(--muted2);font-family:var(--mono)}
+.whatif-result-val{font-size:18px;font-weight:500;font-family:var(--mono)}
+
+/* Approved block */
+.approved-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem}
+.approved-card h3{font-family:var(--serif);font-size:20px;color:var(--green);margin-bottom:1rem;font-weight:400}
+.tip{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted2);line-height:1.5}
+.tip:last-child{border-bottom:none;padding-bottom:0}
+.tip-icon{color:var(--green);flex-shrink:0;margin-top:1px;font-weight:600}
+
+/* CF section */
+.cf-intro{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:10px}
+.cf-intro h2{font-family:var(--serif);font-size:24px;font-weight:400;margin-bottom:6px}
+.cf-intro p{font-size:13px;color:var(--muted2);line-height:1.7}
+.cf-intro strong{color:var(--text);font-weight:500}
+
+/* Plan nav */
+.plan-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.plan-nav-info{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.plan-controls{display:flex;align-items:center;gap:10px}
+.plan-dots{display:flex;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--border2);cursor:pointer;transition:background 0.2s,transform 0.2s}
+.dot.active{background:var(--accent);transform:scale(1.3)}
+.nav-btn{padding:5px 13px;border-radius:8px;border:1px solid var(--border2);background:transparent;font-family:var(--sans);font-size:12px;cursor:pointer;color:var(--muted2);transition:all 0.15s}
+.nav-btn:hover:not(:disabled){background:var(--surface2);color:var(--text)}
+.nav-btn:disabled{opacity:0.25;cursor:default}
+
+/* Plan card */
+.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:none}
+.plan-card.active{display:block;animation:fadeUp 0.3s ease both}
+.plan-header{padding:1.25rem 1.5rem;background:linear-gradient(135deg,rgba(200,169,110,0.12),rgba(200,169,110,0.04));border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.plan-header-title{font-family:var(--serif);font-size:18px;font-weight:400;color:var(--accent2)}
+.plan-badge{font-family:var(--mono);font-size:10px;color:var(--accent);border:1px solid rgba(200,169,110,0.3);padding:3px 10px;border-radius:12px}
+
+/* Steps */
+.step{display:flex;gap:16px;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);transition:background 0.15s}
+.step:last-child{border-bottom:none}
+.step:hover{background:var(--surface2)}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--muted);flex-shrink:0;margin-top:2px}
+.step-body{flex:1}
+.step-feat{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
+.step-change{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;background:var(--surface3);border:1px solid var(--border2);padding:3px 10px;border-radius:6px;margin-bottom:10px}
+.from{color:var(--red);text-decoration:line-through}
+.arr{color:var(--muted)}
+.to{color:var(--green);font-weight:500}
+.step-details{display:flex;flex-direction:column;gap:6px}
+.detail-row{display:flex;gap:8px;align-items:flex-start}
+.detail-lbl{font-family:var(--mono);font-size:10px;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);min-width:55px;padding-top:2px;flex-shrink:0}
+.detail-txt{font-size:12px;color:var(--muted2);line-height:1.55;flex:1}
+.timeline-tag{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--amber);margin-top:5px}
+.timeline-tag::before{content:'◷';font-size:13px}
+
+/* Progress tracker */
+.progress-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-top:12px}
+.progress-title{font-family:var(--serif);font-size:18px;font-weight:400;margin-bottom:6px}
+.progress-desc{font-size:12px;color:var(--muted2);margin-bottom:1.25rem}
+.progress-step{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;border-radius:8px;padding-left:8px}
+.progress-step:last-child{border-bottom:none}
+.progress-step:hover{background:var(--surface2)}
+.progress-checkbox{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;cursor:pointer}
+.progress-checkbox.checked{background:var(--green);border-color:var(--green)}
+.progress-checkbox.checked::after{content:'✓';font-size:11px;color:#0d0d0f;font-weight:700}
+.progress-step-text{flex:1}
+.progress-step-feat{font-size:13px;font-weight:500;color:var(--text)}
+.progress-step-change{font-size:11px;color:var(--muted2);font-family:var(--mono);margin-top:2px}
+.progress-step.done .progress-step-feat{text-decoration:line-through;color:var(--muted)}
+.progress-bar-wrap{margin-top:14px}
+.progress-bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:5px}
+.progress-bar-bg{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.progress-bar-fill{height:100%;background:var(--green);border-radius:3px;transition:width 0.5s ease}
+
+/* PDF button */
+.pdf-btn{width:100%;padding:12px;background:transparent;border:1px solid var(--border2);border-radius:12px;color:var(--muted2);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;margin-top:12px;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.pdf-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,169,110,0.05)}
+
+/* Error */
+.err{background:var(--red-bg);border:1px solid var(--red-bdr);border-radius:10px;padding:12px 16px;color:var(--red);font-size:13px;margin-top:10px;display:none}
+.err.show{display:block}
+
+@media(max-width:600px){
+  .g2,.g3{grid-template-columns:1fr}
+  .header h1{font-size:34px}
+  .verdict{flex-direction:column;text-align:center}
+  .reapp-grid{grid-template-columns:1fr}
+  .reapp-arrow{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-tag">German Credit · ML Assessment</div>
+    <h1>Will your loan be<br><em>approved?</em></h1>
+    <p>Enter your financial details. Our model predicts the outcome — and if rejected, gives you a personalised plan to get approved.</p>
+  </div>
+
+  <!-- Feature Importance pre-load -->
+  <div class="fi-preview" id="fiPreview">
+    <div class="fi-preview-title">Model — Top Feature Importances</div>
+    <div class="fi-loading" id="fiLoading">Loading chart...</div>
+    <img id="fiChart" style="display:none" alt="Feature importance chart">
+  </div>
+
+  <!-- Personal -->
+  <p class="sec-label">Personal details</p>
+  <div class="card">
+    <div class="g2">
+      <div class="field">
+        <label>Age</label>
+        <div class="range-wrap">
+          <span class="range-val" id="ageVal">35</span>
+          <input type="range" id="age" min="19" max="75" value="35"
+            oninput="document.getElementById('ageVal').textContent=this.value;triggerWhatIf()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Personal status &amp; sex</label>
+        <select id="personal_status_sex" onchange="triggerWhatIf()">
+          <option value="A91">Male — divorced / separated</option>
+          <option value="A92">Female — divorced / separated / married</option>
+          <option value="A93" selected>Male — single</option>
+          <option value="A94">Male — married / widowed</option>
+          <option value="A92">Female — single</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Number of dependents</label>
+        <select id="num_dependents" onchange="triggerWhatIf()">
+          <option value="1" selected>1</option>
+          <option value="2">2</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Foreign worker</label>
+        <select id="foreign_worker" onchange="triggerWhatIf()">
+          <option value="A201" selected>Yes</option>
+          <option value="A202">No</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employment -->
+  <p class="sec-label">Employment &amp; housing</p>
+  <div class="card">
+    <div class="g2">
+      <div class="field">
+        <label>Job level</label>
+        <select id="job" onchange="triggerWhatIf()">
+          <option value="A171">Unemployed / unskilled (non-resident)</option>
+          <option value="A172">Unskilled resident</option>
+          <option value="A173" selected>Skilled employee / official</option>
+          <option value="A174">Management / highly qualified</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Employment duration</label>
+        <select id="employment_since" onchange="triggerWhatIf()">
+          <option value="A71">Unemployed</option>
+          <option value="A72">&lt; 1 year</option>
+          <option value="A73" selected>1 – 4 years</option>
+          <option value="A74">4 – 7 years</option>
+          <option value="A75">≥ 7 years</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Housing</label>
+        <select id="housing" onchange="triggerWhatIf()">
+          <option value="A151">Rent</option>
+          <option value="A152" selected>Own</option>
+          <option value="A153">For free</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Years at current residence</label>
+        <div class="range-wrap">
+          <span class="range-val" id="resVal">3</span>
+          <input type="range" id="residence_since" min="1" max="4" value="3"
+            oninput="document.getElementById('resVal').textContent=this.value;triggerWhatIf()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial -->
+  <p class="sec-label">Financial profile</p>
+  <div class="card">
+    <div class="g2">
+      <div class="field">
+        <label>Checking account balance</label>
+        <select id="checking_account_status" onchange="triggerWhatIf()">
+          <option value="A11">&lt; 0 DM (overdrawn)</option>
+          <option value="A12" selected>0 – 200 DM</option>
+          <option value="A13">≥ 200 DM</option>
+          <option value="A14">No checking account</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Savings account balance</label>
+        <select id="savings_account" onchange="triggerWhatIf()">
+          <option value="A61">&lt; 100 DM</option>
+          <option value="A62" selected>100 – 500 DM</option>
+          <option value="A63">500 – 1000 DM</option>
+          <option value="A64">≥ 1000 DM</option>
+          <option value="A65">Unknown / no savings</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Credit history</label>
+        <select id="credit_history" onchange="triggerWhatIf()">
+          <option value="A30">No credits — all paid back</option>
+          <option value="A31">All credits paid back duly</option>
+          <option value="A32" selected>Existing credits paid duly</option>
+          <option value="A33">Delay in paying off credits</option>
+          <option value="A34">Critical / other credits existing</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Existing credits at this bank</label>
+        <div class="range-wrap">
+          <span class="range-val" id="creditsVal">1</span>
+          <input type="range" id="existing_credits" min="1" max="4" value="1"
+            oninput="document.getElementById('creditsVal').textContent=this.value;triggerWhatIf()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loan -->
+  <p class="sec-label">Loan details</p>
+  <div class="card">
+    <div class="g2">
+      <div class="field">
+        <label>Credit amount (DM)</label>
+        <input type="number" id="credit_amount" value="3000" min="250" max="20000"
+          oninput="triggerWhatIf()">
+      </div>
+      <div class="field">
+        <label>Loan purpose</label>
+        <select id="purpose" onchange="triggerWhatIf()">
+          <option value="A40">New car</option>
+          <option value="A41">Used car</option>
+          <option value="A42">Furniture / equipment</option>
+          <option value="A43" selected>Radio / television</option>
+          <option value="A44">Domestic appliances</option>
+          <option value="A45">Repairs</option>
+          <option value="A46">Education</option>
+          <option value="A48">Retraining</option>
+          <option value="A49">Business</option>
+          <option value="A410">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Loan duration (months)</label>
+        <div class="range-wrap">
+          <span class="range-val" id="durVal">24</span>
+          <input type="range" id="duration_months" min="4" max="72" value="24"
+            oninput="document.getElementById('durVal').textContent=this.value;triggerWhatIf()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Installment rate (% of income)</label>
+        <div class="range-wrap">
+          <span class="range-val" id="instVal">3</span>
+          <input type="range" id="installment_rate" min="1" max="4" value="3"
+            oninput="document.getElementById('instVal').textContent=this.value;triggerWhatIf()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional -->
+  <p class="sec-label">Additional factors</p>
+  <div class="card">
+    <div class="g3">
+      <div class="field">
+        <label>Other debtors / guarantors</label>
+        <select id="other_debtors" onchange="triggerWhatIf()">
+          <option value="A101" selected>None</option>
+          <option value="A102">Co-applicant</option>
+          <option value="A103">Guarantor</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Other installment plans</label>
+        <select id="other_installment_plans" onchange="triggerWhatIf()">
+          <option value="A141">Bank</option>
+          <option value="A142">Stores</option>
+          <option value="A143" selected>None</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Property / collateral</label>
+        <select id="property" onchange="triggerWhatIf()">
+          <option value="A121">Real estate</option>
+          <option value="A122">Life insurance</option>
+          <option value="A123" selected>Car or other</option>
+          <option value="A124">No property</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Telephone registered</label>
+        <select id="telephone" onchange="triggerWhatIf()">
+          <option value="A191">None</option>
+          <option value="A192" selected>Yes</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- What-If live indicator (form level) -->
+  <div class="whatif-result" id="liveProb" style="margin-top:12px;display:none">
+    <span class="whatif-result-label">Live approval estimate</span>
+    <span class="whatif-result-val" id="liveProbVal">—</span>
+  </div>
+
+  <button class="submit-btn" id="submitBtn" onclick="runPrediction()">
+    <span id="btnText">Assess my application</span>
+    <span id="btnIcon">→</span>
+  </button>
+  <div class="err" id="errBox"></div>
+
+  <!-- ── RESULTS ── -->
+  <div class="results" id="results">
+
+    <p class="sec-label">Assessment result</p>
+    <div id="verdictBox"></div>
+
+    <!-- Borderline alert -->
+    <div id="borderlineAlert" style="display:none"></div>
+
+    <!-- Prob bar -->
+    <div class="prob-card">
+      <div class="prob-row">
+        <span>Approval probability</span>
+        <span id="probTxt">—</span>
+      </div>
+      <div class="prob-bar">
+        <div class="prob-fill" id="probFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Reapplication score -->
+    <div class="reapp-card" id="reappCard" style="display:none">
+      <div class="reapp-title">Reapplication readiness</div>
+      <div class="reapp-grid">
+        <div class="reapp-stat">
+          <div class="reapp-stat-label">Current probability</div>
+          <div class="reapp-stat-val" id="reappCurrent" style="color:var(--red)">—</div>
+        </div>
+        <div class="reapp-arrow">→</div>
+        <div class="reapp-stat">
+          <div class="reapp-stat-label">After completing plan</div>
+          <div class="reapp-stat-val" id="reappProjected" style="color:var(--green)">—</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted2);font-family:var(--mono)" id="reappDesc"></div>
+    </div>
+
+    <!-- SHAP chart -->
+    <div class="chart-card" id="shapCard" style="display:none">
+      <div class="chart-title">
+        Feature impact on this decision
+        <span class="chart-badge">SHAP</span>
+      </div>
+      <img id="shapChart" alt="SHAP explanation chart">
+    </div>
+
+    <!-- Approved -->
+    <div id="approvedBlock" style="display:none">
+      <div class="approved-card">
+        <h3>Your application looks strong</h3>
+        <div class="tip"><span class="tip-icon">✓</span>Your credit history and financial profile meet the lending criteria.</div>
+        <div class="tip"><span class="tip-icon">✓</span>Prepare all documents — income proof, identity, and residence evidence.</div>
+        <div class="tip"><span class="tip-icon">✓</span>Maintain your current financial behaviour to keep your profile strong.</div>
+        <div class="tip"><span class="tip-icon">✓</span>Avoid taking on new debt before the loan is finalised.</div>
+      </div>
+    </div>
+
+    <!-- Rejected + CFs -->
+    <div id="rejectedBlock" style="display:none">
+      <p class="sec-label">Your personalised action plan</p>
+
+      <div class="cf-intro" id="cfIntro">
+        <h2>Here is how to get approved</h2>
+        <p>We generated <strong id="planCount">0</strong> personalised plan(s) showing the <strong>minimum changes</strong> needed to flip your outcome. Pick whichever fits your situation best.</p>
+      </div>
+
+      <div class="plan-nav" id="planNav">
+        <span class="plan-nav-info" id="planNavInfo">Plan 1 of 1</span>
+        <div class="plan-controls">
+          <div class="plan-dots" id="planDots"></div>
+          <button class="nav-btn" id="prevBtn" onclick="changePlan(-1)" disabled>← Prev</button>
+          <button class="nav-btn" id="nextBtn" onclick="changePlan(1)">Next →</button>
+        </div>
+      </div>
+
+      <div id="planCards"></div>
+
+      <!-- Progress tracker -->
+      <div class="progress-card" id="progressCard" style="display:none">
+        <div class="progress-title">Progress tracker</div>
+        <div class="progress-desc">Check off each step as you complete it to track your readiness to reapply.</div>
+        <div id="progressSteps"></div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-label">
+            <span>Progress</span>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="noCfMsg" style="display:none">
+        <div class="card" style="color:var(--muted2);font-size:13px;line-height:1.7">
+          No specific plans could be generated. Please consult a financial advisor.
+        </div>
+      </div>
+    </div>
+
+    <!-- PDF download -->
+    <button class="pdf-btn" id="pdfBtn" style="display:none" onclick="downloadPDF()">
+      ↓ Download full report as PDF
+    </button>
+
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let curPlan = 0, totalPlans = 0;
+let lastResult = null;
+let whatIfTimer = null;
+
+// ── Collect inputs ────────────────────────────────────────────
+function collectInputs() {
+  return {
+    checking_account_status: $("checking_account_status").value,
+    duration_months:         parseInt($("duration_months").value),
+    credit_history:          $("credit_history").value,
+    purpose:                 $("purpose").value,
+    credit_amount:           parseInt($("credit_amount").value),
+    savings_account:         $("savings_account").value,
+    employment_since:        $("employment_since").value,
+    installment_rate:        parseInt($("installment_rate").value),
+    personal_status_sex:     $("personal_status_sex").value,
+    other_debtors:           $("other_debtors").value,
+    residence_since:         parseInt($("residence_since").value),
+    property:                $("property").value,
+    age:                     parseInt($("age").value),
+    other_installment_plans: $("other_installment_plans").value,
+    housing:                 $("housing").value,
+    existing_credits:        parseInt($("existing_credits").value),
+    job:                     $("job").value,
+    num_dependents:          parseInt($("num_dependents").value),
+    telephone:               $("telephone").value,
+    foreign_worker:          $("foreign_worker").value,
+  };
+}
+
+// ── What-If live simulator ────────────────────────────────────
+function triggerWhatIf() {
+  clearTimeout(whatIfTimer);
+  whatIfTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch("/api/whatif", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(collectInputs()),
+      });
+      const data = await res.json();
+      if (data.probability !== undefined) {
+        $("liveProb").style.display = "flex";
+        const val = $("liveProbVal");
+        val.textContent = data.probability + "%";
+        val.style.color = data.approved ? "#3ecf8e" : data.probability >= 40 ? "#f59e0b" : "#f87171";
+      }
+    } catch(e) {}
+  }, 400);
+}
+
+// ── Feature importance on page load ──────────────────────────
+async function loadFeatureImportance() {
+  try {
+    const res  = await fetch("/api/feature-importance");
+    const data = await res.json();
+    if (data.chart) {
+      $("fiLoading").style.display = "none";
+      $("fiChart").src = "data:image/png;base64," + data.chart;
+      $("fiChart").style.display = "block";
+    }
+  } catch(e) {
+    $("fiLoading").textContent = "Chart unavailable";
+  }
+}
+
+// ── Render verdict ────────────────────────────────────────────
+function renderVerdict(approved, prob) {
+  const cls   = approved ? "approved" : "rejected";
+  const icon  = approved ? "✓" : "✕";
+  const title = approved ? "Loan Approved" : "Loan Rejected";
+  const sub   = approved
+    ? `Approval probability: ${prob}% — strong profile`
+    : `Approval probability: ${prob}% — see action plan below`;
+
+  $("verdictBox").innerHTML = `
+    <div class="verdict ${cls}">
+      <div class="verdict-icon">${icon}</div>
+      <div>
+        <div class="verdict-title">${title}</div>
+        <div class="verdict-sub">${sub}</div>
+      </div>
+    </div>`;
+
+  const col = prob >= 60 ? "#3ecf8e" : prob >= 40 ? "#f59e0b" : "#f87171";
+  setTimeout(() => {
+    $("probFill").style.width      = prob + "%";
+    $("probFill").style.background = col;
+    $("probTxt").textContent       = prob + "%";
+  }, 100);
+}
+
+// ── Borderline alert ──────────────────────────────────────────
+function renderBorderline(borderline, msg) {
+  const box = $("borderlineAlert");
+  if (!borderline || !msg) { box.style.display = "none"; return; }
+  box.style.display = "block";
+  box.innerHTML = `
+    <div class="borderline-alert">
+      <span class="borderline-icon">⚠</span>
+      <div class="borderline-text">
+        <strong>Borderline case detected</strong>
+        ${msg}
+      </div>
+    </div>`;
+}
+
+// ── Reapplication score ───────────────────────────────────────
+function renderReappScore(reapp) {
+  if (!reapp || reapp.projected === null) {
+    $("reappCard").style.display = "none"; return;
+  }
+  $("reappCard").style.display = "block";
+  $("reappCurrent").textContent   = reapp.current + "%";
+  $("reappProjected").textContent = reapp.projected + "%";
+  const imp = reapp.improvement > 0 ? `+${reapp.improvement}%` : `${reapp.improvement}%`;
+  $("reappDesc").textContent =
+    `Complete ${reapp.steps} step(s) in Plan 1 to improve your probability by ${imp}`;
+}
+
+// ── SHAP chart ────────────────────────────────────────────────
+function renderSHAP(shap_b64) {
+  if (!shap_b64) { $("shapCard").style.display = "none"; return; }
+  $("shapCard").style.display = "block";
+  $("shapChart").src = "data:image/png;base64," + shap_b64;
+}
+
+// ── Plan cards ────────────────────────────────────────────────
+function renderPlans(plans) {
+  totalPlans = plans.length;
+  curPlan    = 0;
+  $("planCount").textContent = totalPlans;
+
+  $("planDots").innerHTML = plans.map((_, i) =>
+    `<div class="dot ${i===0?'active':''}" onclick="goToPlan(${i})"></div>`
+  ).join("");
+
+  $("planCards").innerHTML = plans.map((plan, pi) => {
+    const stepsHtml = plan.steps.map((s, si) => `
+      <div class="step">
+        <div class="step-num">${si+1}</div>
+        <div class="step-body">
+          <div class="step-feat">${s.feature}</div>
+          <div class="step-change">
+            <span class="from">${s.from}</span>
+            <span class="arr">→</span>
+            <span class="to">${s.to}</span>
+          </div>
+          <div class="step-details">
+            <div class="detail-row">
+              <span class="detail-lbl">Why</span>
+              <span class="detail-txt">${s.why}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-lbl">How</span>
+              <span class="detail-txt">${s.how}</span>
+            </div>
+          </div>
+          <div class="timeline-tag">${s.timeline}</div>
+        </div>
+      </div>`).join("");
+
+    return `
+      <div class="plan-card ${pi===0?'active':''}" id="plan-${pi}">
+        <div class="plan-header">
+          <span class="plan-header-title">Action Plan ${pi+1}</span>
+          <span class="plan-badge">${plan.steps.length} change${plan.steps.length>1?'s':''} required</span>
+        </div>
+        <div>${stepsHtml}</div>
+      </div>`;
+  }).join("");
+
+  updateNav();
+  renderProgressTracker(plans[0]);
+}
+
+// ── Progress tracker ──────────────────────────────────────────
+function renderProgressTracker(plan) {
+  if (!plan || !plan.steps.length) {
+    $("progressCard").style.display = "none"; return;
+  }
+  $("progressCard").style.display = "block";
+
+  $("progressSteps").innerHTML = plan.steps.map((s, i) => `
+    <div class="progress-step" id="pstep-${i}" onclick="toggleProgress(${i}, ${plan.steps.length})">
+      <div class="progress-checkbox" id="pcheck-${i}"></div>
+      <div class="progress-step-text">
+        <div class="progress-step-feat">${s.feature}</div>
+        <div class="progress-step-change">${s.from} → ${s.to} · ${s.timeline}</div>
+      </div>
+    </div>`).join("");
+
+  updateProgress(plan.steps.length);
+}
+
+function toggleProgress(idx, total) {
+  const check = $(`pcheck-${idx}`);
+  const step  = $(`pstep-${idx}`);
+  const done  = check.classList.toggle("checked");
+  step.classList.toggle("done", done);
+  updateProgress(total);
+}
+
+function updateProgress(total) {
+  const checked = document.querySelectorAll(".progress-checkbox.checked").length;
+  const pct     = total > 0 ? Math.round((checked / total) * 100) : 0;
+  $("progressPct").textContent  = pct + "%";
+  $("progressFill").style.width = pct + "%";
+}
+
+// ── Plan navigation ───────────────────────────────────────────
+function goToPlan(i) {
+  document.querySelectorAll(".plan-card").forEach((c,j) => c.classList.toggle("active", j===i));
+  document.querySelectorAll(".dot").forEach((d,j)       => d.classList.toggle("active", j===i));
+  curPlan = i;
+  $("planNavInfo").textContent = `Plan ${i+1} of ${totalPlans}`;
+  updateNav();
+}
+
+function changePlan(dir) {
+  const n = curPlan + dir;
+  if (n >= 0 && n < totalPlans) goToPlan(n);
+}
+
+function updateNav() {
+  $("prevBtn").disabled = curPlan === 0;
+  $("nextBtn").disabled = curPlan === totalPlans - 1;
+}
+
+// ── PDF download ──────────────────────────────────────────────
+async function downloadPDF() {
+  if (!lastResult) return;
+  const btn = $("pdfBtn");
+  btn.textContent = "Generating PDF...";
+  btn.disabled    = true;
+
+  try {
+    const res = await fetch("/api/pdf", {
+      method:  "POST",
+      headers: {"Content-Type": "application/json"},
+      body:    JSON.stringify({
+        inputs:       collectInputs(),
+        approved:     lastResult.approved,
+        probability:  lastResult.probability,
+        action_plans: lastResult.action_plans,
+        shap_chart:   lastResult.shap_chart,
+        borderline:   lastResult.borderline,
+      }),
+    });
+    if (!res.ok) throw new Error("PDF failed");
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = "loansense_report.pdf";
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert("PDF generation failed. Please try again.");
+  } finally {
+    btn.textContent = "↓ Download full report as PDF";
+    btn.disabled    = false;
+  }
+}
+
+// ── Main prediction ───────────────────────────────────────────
+async function runPrediction() {
+  const btn = $("submitBtn");
+  const err = $("errBox");
+
+  btn.classList.add("loading");
+  $("btnText").textContent = "Analysing your profile...";
+  $("btnIcon").innerHTML   = '<div class="spinner"></div>';
+  err.classList.remove("show");
+
+  try {
+    const res = await fetch("/api/predict", {
+      method:  "POST",
+      headers: {"Content-Type": "application/json"},
+      body:    JSON.stringify(collectInputs()),
+    });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    const data = await res.json();
+    lastResult = {...data, inputs: collectInputs()};
+
+    const { approved, probability, borderline, borderline_msg,
+            shap_chart, action_plans, reapplication } = data;
+
+    renderVerdict(approved, probability);
+    renderBorderline(borderline, borderline_msg);
+    renderSHAP(shap_chart);
+    renderReappScore(!approved ? reapplication : null);
+
+    $("approvedBlock").style.display = approved  ? "block" : "none";
+    $("rejectedBlock").style.display = !approved ? "block" : "none";
+
+    if (!approved) {
+      if (action_plans && action_plans.length > 0) {
+        renderPlans(action_plans);
+        $("cfIntro").style.display   = "block";
+        $("planNav").style.display   = "flex";
+        $("noCfMsg").style.display   = "none";
+        $("planCards").style.display = "block";
+      } else {
+        $("cfIntro").style.display   = "none";
+        $("planNav").style.display   = "none";
+        $("noCfMsg").style.display   = "block";
+        $("planCards").style.display = "none";
+        $("progressCard").style.display = "none";
+      }
+    }
+
+    $("pdfBtn").style.display = "flex";
+    $("results").classList.add("show");
+    setTimeout(() => $("results").scrollIntoView({behavior:"smooth",block:"start"}), 100);
+
+  } catch(e) {
+    err.textContent = `⚠ Could not reach the server: ${e.message}. Make sure Flask is running on port 5000.`;
+    err.classList.add("show");
+  } finally {
+    btn.classList.remove("loading");
+    $("btnText").textContent = "Assess my application";
+    $("btnIcon").textContent = "→";
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+loadFeatureImportance();
+triggerWhatIf();
+</script>
+</body>
+</html>
