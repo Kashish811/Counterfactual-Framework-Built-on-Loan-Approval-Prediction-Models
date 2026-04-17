@@ -71,18 +71,20 @@ Random Forest was selected as the final model for its highest and most consisten
 ## 📂 Project Structure
 
 ```
-├── notebook/
-│   └── loan_approval_pipeline.ipynb   # Full ML pipeline, training, DiCE, SHAP
-├── backend/
-│   ├── app.py                         # Flask REST API
-│   ├── loan_model.pkl                 # Trained Random Forest pipeline
-│   ├── shap_explainer.pkl             # Fitted SHAP TreeExplainer
-│   ├── shap_features.pkl              # Feature names for SHAP
-│   └── feature_importance.json        # Pre-computed top-10 feature importances
-├── frontend/
-│   └── index.html                     # Full UI (HTML + CSS + Vanilla JS)
-├── Procfile                           # Cloud deployment config (Gunicorn)
+LOAN_APP/
+├── templates/
+│   └── index.html              # Full UI (HTML + CSS + Vanilla JS)
+├── __pycache__/                # Python bytecode cache (auto-generated)
+├── .gitignore
+├── app.py                      # Flask REST API (all endpoints)
+├── Code.ipynb                  # Full ML pipeline — EDA, training, DiCE, SHAP
+├── german_credit.csv           # UCI Statlog German Credit Dataset
+├── loan_model.pkl              # Trained Random Forest pipeline (serialised)
+├── loan_threshold.pkl          # Custom decision threshold (0.45)
+├── model_columns.pkl           # Feature column names for inference
+├── Procfile                    # Cloud deployment config (Gunicorn)
 ├── requirements.txt
+├── test_report.pdf             # Sample generated PDF report
 └── README.md
 ```
 
@@ -92,24 +94,50 @@ Random Forest was selected as the final model for its highest and most consisten
 
 ### Prerequisites
 
-- Python 3.x
+- Python 3.11+
 - pip
 
-### Installation
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/<your-username>/<repo-name>.git
 cd <repo-name>
+```
+
+### 2. Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### Run Locally
+### 3. (Optional) Retrain the Model
+
+If you want to regenerate the `.pkl` files from scratch, run all cells in `Code.ipynb`. This will:
+- Load and preprocess `german_credit.csv`
+- Augment with 3,000 synthetic records via GaussianCopulaSynthesizer
+- Train and benchmark all 7 classifiers
+- Save `loan_model.pkl`, `loan_threshold.pkl`, and `model_columns.pkl`
+
+> **Skip this step** if you're using the pre-trained `.pkl` files already in the repo.
+
+### 4. Run the Flask App
 
 ```bash
-python backend/app.py
+python app.py
 ```
 
-Then open `http://localhost:5000` in your browser.
+Then open **`http://localhost:5000`** in your browser.
+
+### 5. Using the App
+
+1. Fill in the applicant's 20 financial features in the input form
+2. Click **Predict** to get the loan decision, probability, and risk badge
+3. If rejected — review the **Action Plan** with counterfactual suggestions
+4. Use the **What-If Simulator** sliders to explore probability changes in real time
+5. Check off completed steps in the **Progress Tracker** to see your probability improve
+6. Click **Download Report** to save a PDF of your results
+
+---
 
 ### Cloud Deployment (Heroku / Render / AWS)
 
@@ -173,8 +201,8 @@ Each counterfactual comes with a human-readable **why**, **how**, **timeline**, 
 
 ## 👥 Team
 
-| Name |
-|------|
+| Name | PRN |
+|------|-----|
 | Kashish Chelwani | 
 | Pruthvieraj Ghule | 
 | Palak Goswami | 
@@ -207,3 +235,4 @@ This project was developed for academic purposes under Symbiosis Institute of Te
 - Wachter et al. (2017) — Counterfactual Explanations Without Opening the Black Box
 - Patki et al. (2016) — The Synthetic Data Vault
 - UCI German Credit Dataset — https://archive.ics.uci.edu/dataset/144
+
